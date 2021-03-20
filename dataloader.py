@@ -80,17 +80,22 @@ class Dataset:
         if self.mode == 'train':
             source = self.data[index] # supervised or unsupervised
             source_label = 1 if index < self.sup_train else 0
+            src_embed = self.unsup
+
             p = np.random.random()
             if p < 0.5:
                 # Supervised
                 target_label = 1
                 target_index = index % self.char_class + self.char_class * np.random.randint(0, self.sup_train - 1)  # same letter from random class
                 target = self.sup_data[target_index]
+                trg_embed = self.unsup
             else:
                 # Unsupervised
                 target_label = 0
-                target_index = index % self.char_class + self.char_class * np.random.randint(0, self.unsup - 1)
+                new_font = np.random.randint(0, self.unsup - 1)
+                target_index = index % self.char_class + self.char_class * new_font
                 target = self.unsup_data[target_index]
+                trg_embed = new_font
 
         elif self.mode == 'test':
             # source from unsup train
@@ -98,10 +103,12 @@ class Dataset:
             font_index = self.val_map[index // self.char_class]
             char_index = index % self.char_class + self.char_class * font_index
             source = self.unsup_data[char_index]
+            src_embed = font_index
 
             # target from (sup) val
             target = self.sup_val[index]
             target_label = 1
+            trg_embed = self.unsup
 
         src_filename, src_char, src_attribute = source
         trg_filename, trg_char, trg_attribute = target
@@ -113,12 +120,12 @@ class Dataset:
         src_style = [src_filename.replace(str(src_char), str(i)) for i in src_style]
         src_style = torch.cat([self.transforms(Image.open(self.image_path + file).convert('RGB')) for file in src_style])
 
-        # fontembed? 
         return {'src_image': src_image, 'src_char': torch.tensor(src_char),
                 'src_attribute': torch.tensor(src_attribute), 'src_style': src_style,
-                'src_label': source_label,
+                'src_label': source_label, 'src_embed': src_embed,
                 'trg_image': trg_image, 'trg_char': torch.tensor(trg_char),
-                'trg_attribute': torch.tensor(trg_attribute), 'trg_label': target_label}
+                'trg_attribute': torch.tensor(trg_attribute), 'trg_label': target_label,
+                'trg_embed': trg_embed}
 
     def __len__(self):
         return len(self.data)

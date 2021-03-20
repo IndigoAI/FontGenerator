@@ -17,7 +17,7 @@ class Attr2FontLearner(pl.LightningModule):
         # attribute: N x 37 -> N x 37 x 64
         self.attr_emb = nn.Embedding(gen_params['attr_channel'], attr_emb)
         # n_unsupervised fonts + 1 dummy id (for supervised)
-        self.unsup_emb = nn.Embedding(n_unsupervised + 1, gen_params['attr_channel'])  # attribute intensity
+        self.font_emb = nn.Embedding(n_unsupervised + 1, gen_params['attr_channel'])  # attribute intensity
 
         self.pixel_loss_fn = nn.L1Loss()
         self.gan_loss_fn = nn.MSELoss()
@@ -32,12 +32,13 @@ class Attr2FontLearner(pl.LightningModule):
         src_attr = batch['src_attribute']
         src_style = batch['src_style']
         src_label = batch['src_label']
+        src_embed = batch['src_embed']
 
         trg_image = batch['trg_image']
         trg_char = batch['trg_char']
         trg_attr = batch['trg_attr']
         trg_label = batch['trg_label']
-        
+        trg_embed = batch['trg_embed']
 
     def configure_optimizers(self):
         lr = self.optim_params['lr']
