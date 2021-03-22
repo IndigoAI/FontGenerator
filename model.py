@@ -25,8 +25,8 @@ class Down(nn.Module):
         super().__init__()
         layers = [nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size,
                   stride=stride, padding=padding, bias=bias)]
-        # if attention:
-        #     layers.append(SelfAttention(out_channel))
+        if attention:
+            layers.append(SelfAttention(out_channel))
         if normalize:
             layers.append(nn.InstanceNorm2d(out_channel))
         if lrelu:
@@ -54,24 +54,27 @@ class ChannelAttnLayer(nn.Module):
 
 
 class Up(nn.Module):
-    def __init__(self, in_channels, out_channels, attr_channels, attr_down_ratio, attention=True, dropout=0):
+    def __init__(self, in_channels, out_channels, attr_channels, attr_down_ratio, attention=False, dropout=0):
         super().__init__()
         # upsample fmaps from prev step
         img_layers = []
         img_layers.append(nn.ConvTranspose2d(in_channels, out_channels, 4, stride=2, padding=1, bias=False))
-        # if attention:
-        #     img_layers.append(SelfAttention(out_channels))
+        if attention:
+            img_layers.append(SelfAttention(out_channels))
         img_layers.append(nn.InstanceNorm2d(out_channels))
         img_layers.append(nn.ReLU(inplace=True))
-        img_layers.append(nn.Dropout(dropout))
+        if dropout:
+            img_layers.append(nn.Dropout(dropout))
         self.img_block = nn.Sequential(*img_layers)
 
         # conv with channel attention for attrs (F_ca to get alpha star)
         attr_layers = []
         for _ in range(attr_down_ratio):
             attr_layers += [nn.Conv2d(attr_channels, attr_channels, 4, stride=2, padding=1, bias=True),
-                            ChannelAttnLayer(attr_channels),
-                            nn.ReLU(inplace=True)]
+                            ChannelAttnLayer(attr_channels)]
+            if attention:
+                attr_layers += [SelfAttention(attr_channels)]
+            attr_layers += [nn.ReLU(inplace=True)]
         self.attr_block = nn.Sequential(*attr_layers)
 
         # conv with with channel attention for img+attr
@@ -99,10 +102,37 @@ class Up(nn.Module):
         out = torch.cat([img_attr, h], 1)
         return out
 
+class SelfAttention(nn.Module):
+    def __init__(self, in_dim, activation=None):
+        super(SelfAttention, self).__init__()
+        self.chanel_in = in_dim
+        self.activation = activation
+
+        self.query_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=1)
+        self.key_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim//8, kernel_size=1)
+        self.value_conv = nn.Conv2d(in_channels=in_dim, out_channels=in_dim, kernel_size=1)
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        m_batchsize, C, width, height = x.size()
+        proj_query = self.query_conv(x).view(m_batchsize, -1, width * height).permute(0, 2, 1)  # B X C X (N)
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)  # B X C X (W*H)
+        energy = torch.bmm(proj_query, proj_key)  # transpose check
+        attention = self.softmax(energy)  # B X (N) X (N)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)  # B X C X N
+
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
+        out = out.view(m_batchsize, C, width, height)
+
+        out = self.gamma*out + x
+        return out
+
 
 class StyleEncoder(nn.Module):
     def __init__(self, in_channel=3, n_style=4, out_channel=256, n_attr=37,
-                 res_blocks=8, attention=True):
+                 res_blocks=8, attention=False):
         super().__init__()
 
         self.downsample = nn.Sequential(
