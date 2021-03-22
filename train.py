@@ -1,5 +1,6 @@
 from dataloader import Dataset
-from model import Generator, Discriminator
+from model import Generator, Discriminator, CXLoss
+from vgg_cx import VGG19_CX
 from wandb_config import API_KEY
 
 from torchvision.utils import make_grid
@@ -13,11 +14,16 @@ import torch
 import wandb
 import os
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
+
 
 class Attr2FontLearner(pl.LightningModule):
     def __init__(self, attr_emb, n_unsupervised, gen_params, discr_params, optim_params, lambds):
         super().__init__()
-        self.n_attr = gen_params['attr_channel']
+        self.n_attr = gen_params['n_attr']
         self.return_attr_D = discr_params['return_attr']
 
         self.G = Generator(**gen_params)
@@ -25,11 +31,11 @@ class Attr2FontLearner(pl.LightningModule):
         self.optim_params = optim_params
 
         # attribute: N x 37 -> N x 37 x 64
-        self.attr_emb = nn.Embedding(gen_params['attr_channel'], attr_emb)
+        self.attr_emb = nn.Embedding(self.n_attr, attr_emb)
         # n_unsupervised fonts + 1 dummy id (for supervised)
-        self.font_emb = nn.Embedding(n_unsupervised + 1, gen_params['attr_channel'])  # attribute intensity
+        self.font_emb = nn.Embedding(n_unsupervised + 1, self.n_attr)  # attribute intensity
 
-        self.lambd_adv = lambds['lambd_avd']
+        self.lambd_adv = lambds['lambd_adv']
         self.lambd_pixel = lambds['lambd_pixel']
         self.lambd_char = lambds['lambd_char']
         self.lambd_cx = lambds['lamdb_cx']
@@ -38,27 +44,35 @@ class Attr2FontLearner(pl.LightningModule):
         self.gan_loss_fn = nn.MSELoss()
         self.pixel_loss_fn = nn.L1Loss()
         self.char_loss_fn = nn.CrossEntropyLoss()
-        self.cx_loss_fn = None
+        self.cx_loss_fn = CXLoss(sigma=0.5)
         self.attr_loss_fn = nn.MSELoss()
 
+        self.vgg19 = VGG19_CX()
+        self.vgg19.load_model('vgg19-dcbb9e9d.pth')
+        self.vgg19.eval()
+        self.vgg_layers = ['conv3_3', 'conv4_2']
+
         self.sample_val = None
+
+    def forward(self, src_image, src_style, delta_emb, delta_attr_emb):
+        return self.G(src_image, src_style, delta_emb, delta_attr_emb)
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         src_image = batch['src_image']
         src_char = batch['src_char']
         src_attr = batch['src_attribute']
         src_style = batch['src_style']
-        src_label = batch['src_label']
+        src_label = batch['src_label'].unsqueeze(-1)
         src_emb = batch['src_embed']
 
         trg_image = batch['trg_image']
-        trg_attr = batch['trg_attr']
-        trg_label = batch['trg_label']
+        trg_attr = batch['trg_attribute']
+        trg_label = batch['trg_label'].unsqueeze(-1)
         trg_emb = batch['trg_embed']
 
         # numbers from 0 to 36
         attr_ids = torch.tensor([i for i in range(self.n_attr)])
-        attr_ids = attr_ids.repeat(len(batch), 1)
+        attr_ids = attr_ids.repeat(len(src_image), 1)
 
         # feature embeddings bs x 37 x emb_size
         src_attr_emb = self.attr_emb(attr_ids)
@@ -66,10 +80,8 @@ class Attr2FontLearner(pl.LightningModule):
 
         # font embeddings bs x 37
         src_emb = self.font_emb(src_emb)
-        # src_emb = src_emb.view(src_emb.size(0), src_emb.size(2))  why 3 dims?????
         src_emb = torch.sigmoid(3 * src_emb)      # why 3 ????
         trg_emb = self.font_emb(trg_emb)
-        # trg_emb = trg_emb.view(trg_emb.size(0), trg_emb.size(2))
         trg_emb = torch.sigmoid(3 * trg_emb)      # why 3 ????
 
         # if sup - use initial emb, if unsup - use learned embs
@@ -80,45 +92,45 @@ class Attr2FontLearner(pl.LightningModule):
         delta_emb = trg_unsup_emb - src_unsup_emb
 
         # for AAM
-        # src_emb = src_emb.unsqueeze(-1)
-        # trg_emb = trg_emb.unsqueeze(-1)
+        src_unsup_emb = src_unsup_emb.unsqueeze(-1)
+        trg_unsup_emb = trg_unsup_emb.unsqueeze(-1)
         src_attr_embd = src_unsup_emb * src_attr_emb
         trg_attr_embd = trg_unsup_emb * trg_attr_emb
         delta_attr_emb = trg_attr_embd - src_attr_embd
 
         # forward G
         if optimizer_idx == 0:
-            trg_fake, src_logits = self.G(src_image, src_style, delta_emb, delta_attr_emb)
+            trg_fake, src_logits = self(src_image, src_style, delta_emb, delta_attr_emb)
             pred_fake, src_attr_pred, trg_attr_pred = self.D(src_image, trg_fake, trg_unsup_emb)
-            src_vgg = None
-            trg_vgg = None
 
-            adv_loss = self.lambd_gan * self.gan_loss_fn(pred_fake, torch.ones_like(pred_fake))
+            adv_loss = self.lambd_adv * self.gan_loss_fn(pred_fake, torch.ones_like(pred_fake))
             pixel_loss = self.lambd_pixel * self.pixel_loss_fn(trg_fake, trg_image)
-            char_loss = self.lambd_char * self.char_loss_fn(src_logits, src_char)  # src_char.shape = bs
-            attr_loss = self.lambd_attr * (self.attr_loss_fn(src_unsup_emb, src_attr_pred) +
-                                           self.attr_loss_fn(trg_unsup_emb, trg_attr_pred))
+            char_loss = self.lambd_char * self.char_loss_fn(src_logits, src_char - 10)  # src_char.shape = bs
+            attr_loss = self.lambd_attr * (self.attr_loss_fn(src_unsup_emb.squeeze(), src_attr_pred.double()) +
+                                           self.attr_loss_fn(trg_unsup_emb.squeeze(), trg_attr_pred.double()))
 
-            # cx_loss = self.lambd_cx * self.cx_loss_fn()
-            # CX loss
-            # cx_loss = torch.zeros(1).to(device)
-            # if opts.lambda_cx > 0:
-            #     for l in vgg_layers:
-            #         cx = cx_loss_fn(vgg_img_B[l], vgg_fake_B[l])
-            #         cx_loss += cx * self.lambd_cx
-            loss_G = adv_loss + pixel_loss + char_loss + attr_loss  # + cx_loss
+            cx_loss = torch.zeros(1)
+            if self.lambd_cx > 0:
+                vgg_trg_fake = self.vgg19(trg_fake)
+                vgg_trg_img = self.vgg19(trg_image)
+
+                for l in self.vgg_layers:
+                    cx = self.cx_loss_fn(vgg_trg_img[l], vgg_trg_fake[l])
+                    cx_loss += cx * self.lambd_cx
+
+            loss_G = adv_loss + pixel_loss + char_loss + attr_loss + cx_loss
             self.logger.log_metrics({'train_g_step_loss': loss_G,
                                      'train_adv_g_loss': adv_loss,
                                      'train_pixel_loss': pixel_loss,
                                      'train_char_loss': char_loss,
                                      'train_loss_cx': cx_loss,
                                      'train_attr_g_loss': attr_loss})
-            return {'g_loss': loss_G}
+            return {'g_loss': loss_G, 'loss': loss_G}
 
         # forward D
         elif optimizer_idx == 1:
             with torch.no_grad():
-                trg_fake, _ = self.G(src_image, src_style, delta_emb, delta_attr_emb)
+                trg_fake, _ = self(src_image, src_style, delta_emb, delta_attr_emb)
             pred_real, src_real_attr_pred, trg_real_attr_pred = self.D(src_image, trg_image, trg_unsup_emb.detach())
             pred_fake, src_fake_attr_pred, trg_fake_attr_pred = self.D(src_image, trg_fake, trg_unsup_emb.detach())
 
@@ -127,17 +139,17 @@ class Attr2FontLearner(pl.LightningModule):
 
             attr_loss = torch.zeros(1)
             if self.return_attr_D:
-                attr_loss = self.lambd_attr * (self.attr_loss_fn(src_unsup_emb, src_real_attr_pred) +
-                                               self.attr_loss_fn(trg_unsup_emb, trg_real_attr_pred) +
-                                               self.attr_loss_fn(src_unsup_emb, src_fake_attr_pred) +
-                                               self.attr_loss_fn(trg_unsup_emb, trg_fake_attr_pred))
+                attr_loss = self.lambd_attr * (self.attr_loss_fn(src_unsup_emb.squeeze(), src_real_attr_pred.double()) +
+                                               self.attr_loss_fn(trg_unsup_emb.squeeze(), trg_real_attr_pred.double()) +
+                                               self.attr_loss_fn(src_unsup_emb.squeeze(), src_fake_attr_pred.double()) +
+                                               self.attr_loss_fn(trg_unsup_emb.squeeze(), trg_fake_attr_pred.double()))
 
             adv_loss = loss_real + loss_fake
             loss_D = adv_loss + attr_loss
             self.logger.log_metrics({'train_d_step_loss': loss_D,
                                      'train_adv_d_loss': adv_loss,
                                      'train_attr_d_loss': attr_loss})
-            return {'d_loss': loss_D}
+            return {'d_loss': loss_D, 'loss': loss_D}
 
     def training_epoch_end(self, outputs):
         avg_g_loss = torch.stack([x['g_loss'] for x in outputs]).mean()
@@ -153,32 +165,31 @@ class Attr2FontLearner(pl.LightningModule):
         src_emb = batch['src_embed']
 
         trg_image = batch['trg_image']
-        trg_sup_emb = batch['trg_embed']
+        trg_attr = batch['trg_attribute']
 
         attr_ids = torch.tensor([i for i in range(self.n_attr)])
-        attr_ids = attr_ids.repeat(len(batch), 1)
+        attr_ids = attr_ids.repeat(len(src_image), 1)
 
         src_attr_emb = self.attr_emb(attr_ids)
         trg_attr_emb = self.attr_emb(attr_ids)
 
         # source from unsup - use unsup emb
         src_unsup_emb = self.font_emb(src_emb)
-        # src_emb = src_emb.view(src_emb.size(0), src_emb.size(2))  why 3 dims?????
         src_unsup_emb = torch.sigmoid(3 * src_unsup_emb)  # why 3 ????
 
         # VST
-        delta_emb = trg_sup_emb - src_unsup_emb
+        delta_emb = trg_attr - src_unsup_emb
 
         # AAM
-        src_attr_embd = src_unsup_emb * src_attr_emb
-        trg_attr_embd = trg_sup_emb * trg_attr_emb
+        src_attr_embd = src_unsup_emb.unsqueeze(-1) * src_attr_emb
+        trg_attr_embd = trg_attr.unsqueeze(-1) * trg_attr_emb
         delta_attr_emb = trg_attr_embd - src_attr_embd
 
-        trg_fake, _ = self.G(src_image, src_style, delta_emb, delta_attr_emb)
+        trg_fake, _ = self(src_image, src_style, delta_emb, delta_attr_emb)
         loss = self.pixel_loss_fn(trg_fake, trg_image)
 
         if self.sample_val is None:
-            self.sample_val = torch.cat((trg_image[:10], trg_fake[:10]), 1)
+            self.sample_val = torch.cat((trg_image[:10], trg_fake[:10]), 0)
         return {'val_loss': loss}
 
     def validation_epoch_end(self, outputs):
@@ -197,7 +208,7 @@ class Attr2FontLearner(pl.LightningModule):
         optimizer_G = Adam([
             {'params': self.G.parameters()},
             {'params': self.attr_emb.parameters(), 'lr': 1e-3},
-            {'params': self.unsup_emb.parameters(), 'lr': 1e-3}],
+            {'params': self.font_emb.parameters(), 'lr': 1e-3}],
             lr=lr, betas=(beta1, beta2))
         optimizer_D = Adam(self.D.parameters(), lr=lr, betas=(beta1, beta2))
         return [optimizer_G, optimizer_D], []
@@ -207,13 +218,13 @@ if __name__ == '__main__':
     attribute_path = 'data/attributes.txt'
     image_path = 'data/image/'
     batch_size = 16
-    epochs = 100
+    epochs = 500
 
     attr_emb = 64
     n_unsupervised = 968
 
     gen_params = {
-        'attr_channel': 37,
+        'in_channels': 3,
         'style_out': 256,
         'out_channels': 3,
         'n_attr': 37,
@@ -227,17 +238,17 @@ if __name__ == '__main__':
     }
 
     optim_params = {
-        'lr': None,
-        'beta1': None,
-        'beta2': None
+        'lr': 2e-4,
+        'beta1': 0.5,
+        'beta2': 0.99
     }
 
     lambds = {
-        'lambd_gan': None,
-        'lambd_pixel': None,
-        'lambd_char': None,
-        'lamdb_cx': None,
-        'lamdb_attr': None
+        'lambd_adv': 5,
+        'lambd_pixel': 50,
+        'lambd_char': 3,
+        'lamdb_cx': 6,
+        'lamdb_attr': 20
     }
 
     model = Attr2FontLearner(attr_emb, n_unsupervised, gen_params, discr_params, optim_params, lambds)
@@ -265,8 +276,8 @@ if __name__ == '__main__':
                                   verbose=True)
 
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=gpus,
-                         accelerator=accelerator,
+                         gpus=gpus)
+                         accelerator=accelerator)
                          logger=wandb_logger,
                          checkpoint_callback=saving_ckpt)
 
