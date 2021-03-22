@@ -4,6 +4,9 @@ from torchvision import transforms
 from torch.utils import data
 from PIL import Image
 
+def rreplace(s, old, new):
+    li = s.rsplit(old, 1)
+    return new.join(li)
 
 class Dataset:
     def __init__(self, attribute_path, image_path, mode='train', sup_train=120, sup_val=28, unsup=968, char_class=52,
@@ -117,7 +120,7 @@ class Dataset:
         trg_image = self.transforms(Image.open(self.image_path + trg_filename).convert('RGB'))
 
         src_style = np.random.choice(np.array(range(10, self.char_class)), self.n_style)  # same font as source, diff chars
-        src_style = [src_filename.replace(str(src_char), str(i)) for i in src_style]
+        src_style = [rreplace(src_filename, str(src_char), str(i)) for i in src_style]
         src_style = torch.cat([self.transforms(Image.open(self.image_path + file).convert('RGB')) for file in src_style])
 
         return {'src_image': src_image, 'src_char': torch.tensor(src_char),
@@ -132,18 +135,26 @@ class Dataset:
 
 
 if __name__ == '__main__':
-    attribute_path = 'data/attributes.txt'
-    image_path = 'data/image/'
+    import matplotlib.pyplot as plt
+    attribute_path = '../data/attributes.txt'
+    image_path = '../data/image/'
 
-    mode = 'test'
+    mode = 'train'
 
     dataset = Dataset(attribute_path, image_path, 'train')
     dataloader = data.DataLoader(dataset=dataset,
                                   drop_last=True,
-                                  batch_size=16)
+                                  batch_size=1,
+                                 shuffle=True)
 
-    for batch in dataloader:
-        img = batch['src_styles']
-        print(img.shape)
+    for i, batch in enumerate(dataloader):
+        if i > 100:
+            source = batch['src_image']
+            target = batch['trg_image']
+            image = torch.cat([source, target], dim=3)
+            image = image.squeeze(0).permute(1, 2, 0)
+            plt.imshow(image)
+            plt.show()
+            print(batch['src_char'], batch['trg_char'])
 
-        1/0
+            1/0
