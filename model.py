@@ -267,7 +267,7 @@ class Discriminator(nn.Module):
         if return_attr:
             self.out_cls = AttrClassifier(in_channels, attr_channels)
 
-    def forward(self, src_image, trg_image, trg_attr_intensity):
+    def forward(self, src_image, trg_image, trg_emb):
         if self.return_attr:
             input = torch.cat([src_image, trg_image], dim=1)
             out = self.net(input)
@@ -275,14 +275,10 @@ class Discriminator(nn.Module):
             src_attr = self.out_cls(src_image)
             trg_attr = self.out_cls(trg_image)
             return out_real, src_attr, trg_attr
-        # else:  # trg_attr_intensity ???
-        #     trg_attr_intensity = trg_attr_intensity.view(trg_attr_intensity.size(0), trg_attr_intensity.size(1), 1, 1)
-        #     trg_attr_intensity = trg_attr_intensity.repeat(1, 1, src_image.size(2), src_image.size(3))
-        #     input = torch.cat([trg_image, trg_attr_intensity], dim=1)
-        #     return self.model(input), None, None
-
-
-
+        else:
+            trg_emb = trg_emb.repeat(1, 1, src_image.size(2), src_image.size(3))
+            input = torch.cat([trg_image, trg_emb], dim=1)
+            return self.model(input), None, None
 
 
 if __name__ == '__main__':
