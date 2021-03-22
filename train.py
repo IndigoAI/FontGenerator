@@ -17,7 +17,7 @@ import os
 import warnings
 warnings.filterwarnings("ignore")
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Attr2FontLearner(pl.LightningModule):
@@ -47,7 +47,7 @@ class Attr2FontLearner(pl.LightningModule):
         self.cx_loss_fn = CXLoss(sigma=0.5)
         self.attr_loss_fn = nn.MSELoss()
 
-        self.vgg19 = VGG19_CX()
+        self.vgg19 = VGG19_CX().to(device)
         self.vgg19.load_model('vgg19-dcbb9e9d.pth')
         self.vgg19.eval()
         self.vgg_layers = ['conv3_3', 'conv4_2']
@@ -71,7 +71,7 @@ class Attr2FontLearner(pl.LightningModule):
         trg_emb = batch['trg_embed']
 
         # numbers from 0 to 36
-        attr_ids = torch.tensor([i for i in range(self.n_attr)])
+        attr_ids = torch.tensor([i for i in range(self.n_attr)]).to(device)
         attr_ids = attr_ids.repeat(len(src_image), 1)
 
         # feature embeddings bs x 37 x emb_size
@@ -109,7 +109,7 @@ class Attr2FontLearner(pl.LightningModule):
             attr_loss = self.lambd_attr * (self.attr_loss_fn(src_unsup_emb.squeeze(), src_attr_pred.double()) +
                                            self.attr_loss_fn(trg_unsup_emb.squeeze(), trg_attr_pred.double()))
 
-            cx_loss = torch.zeros(1)
+            cx_loss = torch.zeros(1).to(device)
             if self.lambd_cx > 0:
                 vgg_trg_fake = self.vgg19(trg_fake)
                 vgg_trg_img = self.vgg19(trg_image)
@@ -137,7 +137,7 @@ class Attr2FontLearner(pl.LightningModule):
             loss_real = self.gan_loss_fn(pred_real, torch.ones_like(pred_real))
             loss_fake = self.gan_loss_fn(pred_fake, torch.zeros_like(pred_real))
 
-            attr_loss = torch.zeros(1)
+            attr_loss = torch.zeros(1).to(device)
             if self.return_attr_D:
                 attr_loss = self.lambd_attr * (self.attr_loss_fn(src_unsup_emb.squeeze(), src_real_attr_pred.double()) +
                                                self.attr_loss_fn(trg_unsup_emb.squeeze(), trg_real_attr_pred.double()) +
@@ -167,7 +167,7 @@ class Attr2FontLearner(pl.LightningModule):
         trg_image = batch['trg_image']
         trg_attr = batch['trg_attribute']
 
-        attr_ids = torch.tensor([i for i in range(self.n_attr)])
+        attr_ids = torch.tensor([i for i in range(self.n_attr)]).to(device)
         attr_ids = attr_ids.repeat(len(src_image), 1)
 
         src_attr_emb = self.attr_emb(attr_ids)
@@ -276,8 +276,8 @@ if __name__ == '__main__':
                                   verbose=True)
 
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=gpus)
-                         accelerator=accelerator)
+                         gpus=gpus,
+                         accelerator=accelerator,
                          logger=wandb_logger,
                          checkpoint_callback=saving_ckpt)
 
