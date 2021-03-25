@@ -60,7 +60,8 @@ class Generator(nn.Module):
     def forward(self, x, labels):
         labels = labels.view(labels.size(0), labels.size(1), 1, 1)
         labels = labels.repeat(1, 1, x.size(2), x.size(3))
-        x = torch.cat([x, labels], dim=1)
+
+        x = torch.cat([x, labels.float()], dim=1)
         return self.layers(x)
 
 

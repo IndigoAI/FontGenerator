@@ -4,7 +4,6 @@ from torchvision import transforms
 from torch.utils import data
 from PIL import Image
 
-
 class Dataset:
     def __init__(self, attribute_path, image_path, mode='train', sup_train=120, sup_val=28, unsup=968, char_class=52,
                  n_style=4):
@@ -99,7 +98,8 @@ class Dataset:
                 'src_label': source_label, 'src_embed': src_embed}
 
     def __len__(self):
-        return len(self.data)
+        # return len(self.data)
+        return 256
 
 
 if __name__ == '__main__':
