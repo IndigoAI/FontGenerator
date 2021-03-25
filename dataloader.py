@@ -32,7 +32,7 @@ class Dataset:
         self.idx2filename = None
         self.filename2idx = None
 
-        self.data, self.unsup_data, self.sup_data = self.get_data(self.attribute_path)
+        self.data, self.unsup_data, self.sup_data, self.val_data = self.get_data(self.attribute_path)
 
         self.val_map = {}
         for font in range(self.sup_val):
@@ -72,12 +72,10 @@ class Dataset:
 
         data = [item for item in zip(filenames, chars, attributes)]   # full_filename, number before .png, list of 0..1
         unsup_data = data[(self.sup_train + self.sup_val) * self.char_class:]
-        if self.mode == 'train':
-            sup_data = data[:self.sup_train * self.char_class]
-        else:
-            sup_data = data[self.sup_train * self.char_class: (self.sup_train + self.sup_val) * self.char_class]
+        sup_data = data[:self.sup_train * self.char_class]
+        val_data = data[self.sup_train * self.char_class: (self.sup_train + self.sup_val) * self.char_class]
         data = np.concatenate([sup_data, unsup_data])
-        return data, unsup_data, sup_data
+        return data, unsup_data, sup_data, val_data
 
     def __getitem__(self, index):
         if self.mode == 'train':
@@ -109,7 +107,8 @@ class Dataset:
             src_embed = font_index
 
             # target from (sup) val
-            target = self.sup_val[index]
+            # print('here', len(self.val_data))
+            target = self.val_data[index]
             target_label = 1
             trg_embed = self.unsup
 
@@ -131,30 +130,34 @@ class Dataset:
                 'trg_embed': trg_embed}
 
     def __len__(self):
-        return len(self.data)
+        if self.mode == 'train':
+            return len(self.data)
+        else:
+            return len(self.val_data)
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    attribute_path = '../data/attributes.txt'
-    image_path = '../data/image/'
+    attribute_path = 'data/attributes.txt'
+    image_path = 'data/image/'
 
     mode = 'train'
 
-    dataset = Dataset(attribute_path, image_path, 'train')
+    dataset = Dataset(attribute_path, image_path, mode='test')
     dataloader = data.DataLoader(dataset=dataset,
                                   drop_last=True,
                                   batch_size=1,
                                  shuffle=True)
 
     for i, batch in enumerate(dataloader):
-        if i > 100:
-            source = batch['src_image']
-            target = batch['trg_image']
-            image = torch.cat([source, target], dim=3)
-            image = image.squeeze(0).permute(1, 2, 0)
-            plt.imshow(image)
-            plt.show()
-            print(batch['src_char'], batch['trg_char'])
+        pass
+        # if i > 100:
+        #     source = batch['src_image']
+        #     target = batch['trg_image']
+        #     image = torch.cat([source, target], dim=3)
+        #     image = image.squeeze(0).permute(1, 2, 0)
+        #     plt.imshow(image)
+        #     plt.show()
+        #     print(batch['src_char'], batch['trg_char'])
 
-            1/0
+    print(k)
