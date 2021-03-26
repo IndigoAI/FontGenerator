@@ -355,10 +355,6 @@ class CXLoss(nn.Module):
         :param featureI: inference
         :return:
         '''
-
-        # print("featureT target size:", featureT.shape)
-        # print("featureI inference size:", featureI.shape)
-
         featureI, featureT = self.center_by_T(featureI, featureT)
 
         featureI = self.l2_normalize_channelwise(featureI)
@@ -390,18 +386,3 @@ class CXLoss(nn.Module):
         CX = -torch.log(CX)
         CX = torch.mean(CX)
         return CX
-
-
-
-if __name__ == '__main__':
-    image = torch.ones((16, 3, 64, 64))
-    style = torch.ones((16, 12, 64, 64))
-    attr = torch.ones((16, 37))
-    attr_features = torch.ones((16, 37, 64))
-
-    # generator = Generator(3)
-    # generator(image, style, attr, attr_features)
-
-    discr = Discriminator()
-    discr(image, image, None)
-

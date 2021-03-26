@@ -135,30 +135,3 @@ class Dataset:
             return len(self.data)
         else:
             return len(self.val_data)
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    attribute_path = 'data/attributes.txt'
-    image_path = 'data/image/'
-
-    mode = 'train'
-
-    dataset = Dataset(attribute_path, image_path, mode='test')
-    dataloader = data.DataLoader(dataset=dataset,
-                                  drop_last=True,
-                                  batch_size=1,
-                                 shuffle=True)
-
-    for i, batch in enumerate(dataloader):
-        pass
-        # if i > 100:
-        #     source = batch['src_image']
-        #     target = batch['trg_image']
-        #     image = torch.cat([source, target], dim=3)
-        #     image = image.squeeze(0).permute(1, 2, 0)
-        #     plt.imshow(image)
-        #     plt.show()
-        #     print(batch['src_char'], batch['trg_char'])
-
-    print(k)

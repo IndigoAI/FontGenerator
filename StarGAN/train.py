@@ -14,6 +14,9 @@ import torch
 import wandb
 import os
 
+from calculate_fid import calculate_fid
+from inception import fid_inception_v3
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -77,7 +80,7 @@ class StarGANLearner(pl.LightningModule):
 
         # font embeddings bs x 37
         src_emb = self.font_emb(src_emb)
-        src_emb = torch.sigmoid(3 * src_emb)      # why 3 ????
+        src_emb = torch.sigmoid(3 * src_emb)
 
         # if sup - use initial emb, if unsup - use learned embs
         src_emb = src_label * src_attr + (1 - src_label) * src_emb
@@ -116,21 +119,23 @@ class StarGANLearner(pl.LightningModule):
                                  'train_d_epoch_loss': avg_d_loss,
                                  'epoch': self.current_epoch})
 
-    def validation_step(self, batch, *args):
+    def calculate_val_input(self, batch):
         src_image = batch['src_image']
-        src_attr = batch['src_attribute']
-        src_label = batch['src_label'].unsqueeze(-1)
         src_emb = batch['src_embed']
-        # print(src_emb)
 
         # source from unsup - use unsup emb
         src_emb = self.font_emb(src_emb)
-        src_emb = torch.sigmoid(3 * src_emb)  # why 3 ????
+        src_emb = torch.sigmoid(3 * src_emb)
         src_emb = torch.where(src_emb >= 0.5, torch.tensor(1.).to(self.device), torch.tensor(0.).to(self.device))
 
         trg_emb = permute_labels(src_emb, mode='val')
-    
         fake_image = self(src_image, trg_emb)
+        return fake_image, src_emb
+
+    def validation_step(self, batch, *args):
+        src_image = batch['src_image']
+        fake_image, src_emb = self.calculate_val_input(batch)
+
         rec_image = self(fake_image, src_emb)
         loss = self.rec_loss(rec_image, src_image)
     
@@ -235,3 +240,17 @@ if __name__ == '__main__':
                          checkpoint_callback=saving_ckpt)
 
     trainer.fit(model, train_loader, val_loader)
+
+    # Calculate FID
+    classifier = fid_inception_v3()
+
+    ckpt_path = 'stargan_epoch=107-val_loss=0.009.ckptstargan_epoch=107-val_loss=0.009.ckpt'
+    model = StarGANLearner.load_from_checkpoint(ckpt_path,
+                                                n_attr=n_attr,
+                                                n_unsupervised=n_unsupervised,
+                                                discr_params=discr_params,
+                                                optim_params=optim_params,
+                                                lambds=lambds)
+
+    fid = calculate_fid(val_loader, model, classifier)
+    print(fid)

@@ -3,6 +3,9 @@ from model import Generator, Discriminator, CXLoss
 from vgg_cx import VGG19_CX
 from wandb_config import API_KEY
 
+from calculate_fid import calculate_fid
+from inception import fid_inception_v3
+
 from torchvision.utils import make_grid
 from torch.optim import Adam
 from torch.utils import data
@@ -13,9 +16,6 @@ import torch.nn as nn
 import torch
 import wandb
 import os
-
-import warnings
-warnings.filterwarnings("ignore")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -159,12 +159,11 @@ class Attr2FontLearner(pl.LightningModule):
                                  'train_d_epoch_loss': avg_d_loss,
                                  'epoch': self.current_epoch})
 
-    def validation_step(self, batch, *args):
+    def calculate_val_input(self, batch):
         src_image = batch['src_image']
         src_style = batch['src_style']
         src_emb = batch['src_embed']
 
-        trg_image = batch['trg_image']
         trg_attr = batch['trg_attribute']
 
         attr_ids = torch.tensor([i for i in range(self.n_attr)]).to(device)
@@ -184,6 +183,11 @@ class Attr2FontLearner(pl.LightningModule):
         src_attr_embd = src_unsup_emb.unsqueeze(-1) * src_attr_emb
         trg_attr_embd = trg_attr.unsqueeze(-1) * trg_attr_emb
         delta_attr_emb = trg_attr_embd - src_attr_embd
+        return src_image, src_style, delta_emb, delta_attr_emb
+
+    def validation_step(self, batch, *args):
+        trg_image = batch['trg_image']
+        src_image, src_style, delta_emb, delta_attr_emb = self.calculate_val_input(batch)
 
         trg_fake, _ = self(src_image, src_style, delta_emb, delta_attr_emb)
         loss = self.pixel_loss_fn(trg_fake, trg_image)
@@ -285,7 +289,6 @@ if __name__ == '__main__':
     trainer.fit(model, train_loader, val_loader)
 
     # Calculate FID
-    from inception import fid_inception_v3
     classifier = fid_inception_v3()
 
     ckpt_path = 'epoch=108-val_loss=0.148.ckpt'

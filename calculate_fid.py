@@ -3,6 +3,7 @@ import torch
 from scipy import linalg
 from torch.nn.functional import adaptive_avg_pool2d
 from tqdm import tqdm
+import torch.nn as nn
 
 
 def resize(image, size=299):
@@ -76,15 +77,15 @@ def calculate_activation_statistics(dataloader, model, classifier, out_dim):
     act_real = np.zeros((len(dataloader.dataset), out_dim))
     
     for batch in tqdm(dataloader, desc='activation stats loop', leave=True):
-        img = img.to(device)
-        label = label.to(device)
-        bs = img.shape[0]
+        src_image = batch['src_image']
+        bs = src_image.shape[0]
 
         with torch.no_grad():
-            gen, _ = model(*batch)
+            model_input = model.calculate_val_input(batch)
+            gen, _ = model(*model_input)
 
         out_gen = classifier(resize(gen)).cpu().numpy()
-        out_real = classifier(resize(img)).cpu().numpy()
+        out_real = classifier(resize(src_image)).cpu().numpy()
 
         act_gen[i: i + bs] = out_gen
         act_real[i: i + bs] = out_real
