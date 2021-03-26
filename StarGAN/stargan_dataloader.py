@@ -28,7 +28,7 @@ class Dataset:
         self.idx2filename = None
         self.filename2idx = None
 
-        self.data, self.unsup_data, self.sup_data = self.get_data(self.attribute_path)
+        self.data, self.unsup_data, self.sup_data, self.val_data = self.get_data(self.attribute_path)
 
         self.val_map = {}
         for font in range(self.sup_val):
@@ -68,18 +68,17 @@ class Dataset:
 
         data = [item for item in zip(filenames, chars, attributes)]   # full_filename, number before .png, list of 0..1
         unsup_data = data[(self.sup_train + self.sup_val) * self.char_class:]
-        if self.mode == 'train':
-            sup_data = data[:self.sup_train * self.char_class]
-        else:
-            sup_data = data[self.sup_train * self.char_class: (self.sup_train + self.sup_val) * self.char_class]
+        sup_data = data[:self.sup_train * self.char_class]
+        val_data = data[self.sup_train * self.char_class: (self.sup_train + self.sup_val) * self.char_class]
         data = np.concatenate([sup_data, unsup_data])
-        return data, unsup_data, sup_data
+        return data, unsup_data, sup_data, val_data
 
     def __getitem__(self, index):
         if self.mode == 'train':
             source = self.data[index] # supervised or unsupervised
-            source_label = 1 if index < self.sup_train else 0
-            src_embed = self.unsup
+            source_label = 1 if index < self.sup_train * self.char_class else 0
+            src_embed = self.unsup if index < self.sup_train * self.char_class else (index // self.char_class -
+                                                                                     self.sup_train)
 
         elif self.mode == 'test':
             # source from unsup train
@@ -98,8 +97,10 @@ class Dataset:
                 'src_label': source_label, 'src_embed': src_embed}
 
     def __len__(self):
-        # return len(self.data)
-        return 256
+        if self.mode == 'train':
+            return len(self.data)
+        else:
+            return len(self.val_data)
 
 
 if __name__ == '__main__':

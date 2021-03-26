@@ -80,9 +80,9 @@ class Attr2FontLearner(pl.LightningModule):
 
         # font embeddings bs x 37
         src_emb = self.font_emb(src_emb)
-        src_emb = torch.sigmoid(3 * src_emb)      # why 3 ????
+        src_emb = torch.sigmoid(3 * src_emb)
         trg_emb = self.font_emb(trg_emb)
-        trg_emb = torch.sigmoid(3 * trg_emb)      # why 3 ????
+        trg_emb = torch.sigmoid(3 * trg_emb)
 
         # if sup - use initial emb, if unsup - use learned embs
         src_unsup_emb = src_label * src_attr + (1 - src_label) * src_emb
@@ -119,13 +119,13 @@ class Attr2FontLearner(pl.LightningModule):
                     cx_loss += cx * self.lambd_cx
 
             loss_G = adv_loss + pixel_loss + char_loss + attr_loss + cx_loss
-            self.logger.log_metrics({'train_g_step_loss': loss_G,
-                                     'train_adv_g_loss': adv_loss,
-                                     'train_pixel_loss': pixel_loss,
-                                     'train_char_loss': char_loss,
-                                     'train_loss_cx': cx_loss,
-                                     'train_attr_g_loss': attr_loss})
-            return {'g_loss': loss_G, 'loss': loss_G}
+            self.logger.log_metrics({'train_g_step_loss': loss_G.item(),
+                                     'train_adv_g_loss': adv_loss.item(),
+                                     'train_pixel_loss': pixel_loss.item(),
+                                     'train_char_loss': char_loss.item(),
+                                     'train_loss_cx': cx_loss.item(),
+                                     'train_attr_g_loss': attr_loss.item()})
+            return {'loss': loss_G}
 
         # forward D
         elif optimizer_idx == 1:
@@ -149,11 +149,11 @@ class Attr2FontLearner(pl.LightningModule):
             self.logger.log_metrics({'train_d_step_loss': loss_D,
                                      'train_adv_d_loss': adv_loss,
                                      'train_attr_d_loss': attr_loss})
-            return {'d_loss': loss_D, 'loss': loss_D}
+            return {'loss': loss_D}
 
     def training_epoch_end(self, outputs):
-        avg_g_loss = torch.stack([x['g_loss'] for x in outputs]).mean()
-        avg_d_loss = torch.stack([x['d_loss'] for x in outputs]).mean()
+        avg_g_loss = torch.stack([x['loss'] for x in outputs[0]]).mean()
+        avg_d_loss = torch.stack([x['loss'] for x in outputs[1]]).mean()
 
         self.logger.log_metrics({'train_g_epoch_loss': avg_g_loss,
                                  'train_d_epoch_loss': avg_d_loss,
@@ -175,7 +175,7 @@ class Attr2FontLearner(pl.LightningModule):
 
         # source from unsup - use unsup emb
         src_unsup_emb = self.font_emb(src_emb)
-        src_unsup_emb = torch.sigmoid(3 * src_unsup_emb)  # why 3 ????
+        src_unsup_emb = torch.sigmoid(3 * src_unsup_emb)
 
         # VST
         delta_emb = trg_attr - src_unsup_emb
@@ -194,7 +194,7 @@ class Attr2FontLearner(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        grid_img = make_grid(self.sample_val, nrow=2)
+        grid_img = make_grid(self.sample_val, nrow=10)
         self.logger.log_metrics({'val_loss': avg_loss,
                                  'epoch': self.current_epoch,
                                  'val imgs': [wandb.Image(grid_img)]})
@@ -255,11 +255,12 @@ if __name__ == '__main__':
 
     train_dataset = Dataset(attribute_path, image_path,  mode='train')
     train_loader = data.DataLoader(dataset=train_dataset,
+                                   shuffle=True,
                                    drop_last=True,
                                    batch_size=batch_size)
 
     val_dataset = Dataset(attribute_path, image_path,  mode='test')
-    val_loader = data.DataLoader(dataset=train_dataset,
+    val_loader = data.DataLoader(dataset=val_dataset,
                                  drop_last=True,
                                  batch_size=batch_size)
 
@@ -282,3 +283,20 @@ if __name__ == '__main__':
                          checkpoint_callback=saving_ckpt)
 
     trainer.fit(model, train_loader, val_loader)
+
+    # Calculate FID
+    from inception import fid_inception_v3
+    classifier = fid_inception_v3()
+
+    ckpt_path = 'epoch=108-val_loss=0.148.ckpt'
+    model = Attr2FontLearner.load_from_checkpoint(ckpt_path,
+                                                  attr_embd=attr_emb,
+                                                  n_unsupervised=n_unsupervised,
+                                                  gen_params=gen_params,
+                                                  discr_params=discr_params,
+                                                  optim_params=optim_params,
+                                                  lambds=lambds)
+
+    fid = calculate_fid(val_loader, model.G, classifier)
+    print(fid)
+
