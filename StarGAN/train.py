@@ -11,7 +11,7 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-# import wandb
+import wandb
 import os
 
 import warnings
@@ -121,6 +121,7 @@ class StarGANLearner(pl.LightningModule):
         src_attr = batch['src_attribute']
         src_label = batch['src_label'].unsqueeze(-1)
         src_emb = batch['src_embed']
+        # print(src_emb)
 
         # source from unsup - use unsup emb
         src_emb = self.font_emb(src_emb)
@@ -128,15 +129,15 @@ class StarGANLearner(pl.LightningModule):
         src_emb = torch.where(src_emb >= 0.5, torch.tensor(1.).to(self.device), torch.tensor(0.).to(self.device))
 
         trg_emb = permute_labels(src_emb, mode='val')
-
+    
         fake_image = self(src_image, trg_emb)
         rec_image = self(fake_image, src_emb)
         loss = self.rec_loss(rec_image, src_image)
-
+    
         if self.sample_val is None:
             self.sample_val = torch.cat((src_image[:10], fake_image[:10]), 0)
         return {'val_loss': loss}
-
+    
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         grid_img = make_grid(self.sample_val, nrow=10)
@@ -217,20 +218,20 @@ if __name__ == '__main__':
 
     os.environ["WANDB_API_KEY"] = API_KEY
     os.environ['WANDB_MODE'] = 'dryrun'
-    # wandb_logger = WandbLogger(project='Attr2Font')
-    #
+    wandb_logger = WandbLogger(project='Attr2Font')
+
     gpus = torch.cuda.device_count()
     accelerator = 'ddp' if gpus == 2 else None
-    # saving_ckpt = ModelCheckpoint(dirpath='checkpoints',
-    #                               filename='{epoch}-{val_loss:.3f}',
-    #                               save_top_k=3,
-    #                               monitor='val_loss',
-    #                               verbose=True)
+    saving_ckpt = ModelCheckpoint(dirpath='checkpoints',
+                                  filename='{epoch}-{val_loss:.3f}',
+                                  save_top_k=3,
+                                  monitor='val_loss',
+                                  verbose=True)
 
     trainer = pl.Trainer(max_epochs=epochs,
-                         gpus=gpus)
-                         # accelerator=accelerator,
-                         # logger=wandb_logger,
-                         # checkpoint_callback=saving_ckpt)
+                         gpus=gpus,
+                         accelerator=accelerator,
+                         logger=wandb_logger,
+                         checkpoint_callback=saving_ckpt)
 
-    trainer.fit(model, train_loader)
+    trainer.fit(model, train_loader, val_loader)
