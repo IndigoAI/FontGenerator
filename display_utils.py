@@ -122,8 +122,8 @@ def get_attribute(model, dataloader, idx=-1):
                 break
 
 
-    embed_id = batch['src_embed'][0]
+    embed_id = source['src_embed'][0]
     attribute = torch.sigmoid(3 * model.font_emb(torch.tensor(embed_id).to(device))) * 100
     result = {name: attr for name, attr in zip(names, attribute)}
-    return result
+    return source, result
 
