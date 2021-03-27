@@ -1,4 +1,5 @@
-from train import Attr2FontLearner
+from Attr2Font.train import Attr2FontLearner
+from StarGAN.train import StarGANLearner
 import numpy as np
 import torch
 from torchvision.utils import make_grid
@@ -8,12 +9,8 @@ import ipywidgets as widgets
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-attribute_path = 'data/attributes.txt'
-image_path = 'data/image/'
-batch_size = 16
-epochs = 500
 
-attr_emb = 64
+ATTR_EMB = 64
 n_unsupervised = 968
 
 gen_params = {
@@ -46,23 +43,27 @@ lambds = {
 
 
 
-def load_model(weights='gdrive/MyDrive/HSE/GenModels/project/epoch=108-val_loss=0.148.ckpt'):
-    model = Attr2FontLearner.load_from_checkpoint(weights,
-                                                  attr_emb=attr_emb,
-                                                  n_unsupervised=n_unsupervised, gen_params=gen_params,
-                                                  discr_params=discr_params, optim_params=optim_params,
-                                                  lambds=lambds).to(device)
+def load_model(weights, model='Attr2Font'):
+    if model == 'Attr2Font':
+        model = Attr2FontLearner.load_from_checkpoint(weights,
+                                                      attr_emb=64,
+                                                      n_unsupervised=968, gen_params=gen_params,
+                                                      discr_params=discr_params, optim_params=optim_params,
+                                                      lambds=lambds).to(device)
     return model
 
 
-def generate(target, model, dataloader, k=-1):
+def generate(target, model, dataloader, idx=-1):
+    """
+    idx - index of batch in dataloader, if idx = -1 - random
+    """
     target = torch.tensor(target).to(device) / 100
 
     with torch.no_grad():
-        if k == -1:
-            k = torch.randint(len(dataloader), (1, 1))
+        if idx == -1:
+            idx = torch.randint(len(dataloader), (1, 1))
         for i, batch in enumerate(dataloader):
-            if i == k:
+            if i == idx:
                 source = batch
                 break
 
@@ -81,7 +82,10 @@ def generate(target, model, dataloader, k=-1):
         return make_grid(source['src_image']).permute(1, 2, 0), gen.cpu()
 
 
-def get_widgets(values=0):
+def get_widgets(attribute_path='data/attributes.txt', values=0):
+    """
+    values - if values = 0 all values in widget 0, else - random
+    """
     with open(attribute_path, 'r') as file:
         names = file.readline().split()[1:]
 
@@ -120,5 +124,3 @@ def show(image):
         axes[1].imshow(image[1])
         axes[1].set_title('Fake', fontsize=30)
         plt.show()
-
-        
