@@ -82,6 +82,7 @@ def generate(target, model, dataloader, idx=-1):
         return make_grid(source['src_image']).permute(1, 2, 0), gen.cpu()
 
 
+
 def get_widgets(attribute_path='data/attributes.txt', values=0):
     """
     values - if values = 0 all values in widget 0, else - random
@@ -124,3 +125,4 @@ def show(image):
         axes[1].imshow(image[1])
         axes[1].set_title('Fake', fontsize=30)
         plt.show()
+
