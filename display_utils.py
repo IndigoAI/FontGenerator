@@ -97,7 +97,7 @@ def get_widgets(values=0):
 def show(image):
     if len(image) == 1:
         plt.figure(figsize=(10,10))
-        plt.imshow(image)
+        plt.imshow(image[0])
         plt.show()
     else:
         fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(17, 10))
@@ -124,6 +124,6 @@ def get_attribute(model, dataloader, idx=-1):
 
     embed_id = source['src_embed'][0]
     attribute = torch.sigmoid(3 * model.font_emb(torch.tensor(embed_id).to(device))) * 100
-    result = {name: attr for name, attr in zip(names, attribute)}
-    return source, result
+    result = {name: attr.item() for name, attr in zip(names, attribute)}
+    return make_grid(source['src_image']).permute(1, 2, 0), result
 
