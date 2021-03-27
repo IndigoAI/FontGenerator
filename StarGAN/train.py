@@ -1,6 +1,6 @@
-from stargan_dataloader import Dataset
-from stargan import Generator, Discriminator
-from wandb_config import API_KEY
+from StarGAN.dataloader import Dataset
+from StarGAN.stargan import Generator, Discriminator
+# from wandb_config import API_KEY
 
 from torchvision.utils import make_grid
 from torch.optim import Adam
@@ -11,7 +11,7 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-import wandb
+# import wandb
 import os
 
 from calculate_fid import calculate_fid
@@ -221,8 +221,8 @@ if __name__ == '__main__':
                                  batch_size=batch_size)
 
 
-    os.environ["WANDB_API_KEY"] = API_KEY
-    os.environ['WANDB_MODE'] = 'dryrun'
+    # os.environ["WANDB_API_KEY"] = API_KEY
+    # os.environ['WANDB_MODE'] = 'dryrun'
     wandb_logger = WandbLogger(project='Attr2Font')
 
     gpus = torch.cuda.device_count()

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a411b523-15ff-4be1-9c89-448548d8036a" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/Attr2Font/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/Attr2Font/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +35,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1616804934070</updated>
-      <workItem from="1616804943041" duration="1253000" />
+      <workItem from="1616804943041" duration="1409000" />
+      <workItem from="1616806842119" duration="22000" />
     </task>
     <servers />
   </component>
@@ -43,9 +44,9 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="141" y="39" key="SettingsEditor" timestamp="1616804972488">
+    <state x="141" y="39" key="SettingsEditor" timestamp="1616806863364">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
-    <state x="141" y="39" key="SettingsEditor/0.0.1280.800@0.0.1280.800" timestamp="1616804972488" />
+    <state x="141" y="39" key="SettingsEditor/0.0.1280.800@0.0.1280.800" timestamp="1616806863364" />
   </component>
 </project>

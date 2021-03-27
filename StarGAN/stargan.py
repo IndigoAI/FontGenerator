@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from utils import compute_gradient_penalty
+from StarGAN.utils import compute_gradient_penalty
 from torch.optim.lr_scheduler import StepLR
 
 

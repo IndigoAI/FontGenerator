@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-import wandb
+# import wandb
 import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -269,7 +269,7 @@ if __name__ == '__main__':
                                  batch_size=batch_size)
 
     # os.environ["WANDB_API_KEY"] = API_KEY
-    os.environ['WANDB_MODE'] = 'dryrun'
+    # os.environ['WANDB_MODE'] = 'dryrun'
     wandb_logger = WandbLogger(project='Attr2Font')
 
     gpus = torch.cuda.device_count()
