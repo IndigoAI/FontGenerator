@@ -10,9 +10,6 @@ import ipywidgets as widgets
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-ATTR_EMB = 64
-n_unsupervised = 968
-
 gen_params = {
     'in_channels': 3,
     'style_out': 256,
