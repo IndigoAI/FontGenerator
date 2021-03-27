@@ -1,5 +1,6 @@
 from Attr2Font.dataloader import Dataset
 from Attr2Font.attr2font import Generator, Discriminator, CXLoss
+from config import PARAMS
 from Attr2Font.vgg_cx import VGG19_CX
 # from wandb_config import API_KEY
 
@@ -227,35 +228,9 @@ if __name__ == '__main__':
     attr_emb = 64
     n_unsupervised = 968
 
-    gen_params = {
-        'in_channels': 3,
-        'style_out': 256,
-        'out_channels': 3,
-        'n_attr': 37,
-        'attention': True
-    }
+    params = PARAMS['Attr2Font']
 
-    discr_params = {
-        'in_channels': 3,
-        'attr_channels': 37,
-        'return_attr': True
-    }
-
-    optim_params = {
-        'lr': 2e-4,
-        'beta1': 0.5,
-        'beta2': 0.99
-    }
-
-    lambds = {
-        'lambd_adv': 5,
-        'lambd_pixel': 50,
-        'lambd_char': 3,
-        'lamdb_cx': 6,
-        'lamdb_attr': 20
-    }
-
-    model = Attr2FontLearner(attr_emb, n_unsupervised, gen_params, discr_params, optim_params, lambds)
+    model = Attr2FontLearner(attr_emb, n_unsupervised, **params)
 
     train_dataset = Dataset(attribute_path, image_path,  mode='train')
     train_loader = data.DataLoader(dataset=train_dataset,
@@ -291,14 +266,11 @@ if __name__ == '__main__':
     # Calculate FID
     classifier = fid_inception_v3()
 
-    ckpt_path = 'epoch=108-val_loss=0.148.ckpt'
+    ckpt_path = 'attr2font.ckpt'
     model = Attr2FontLearner.load_from_checkpoint(ckpt_path,
-                                                  attr_embd=attr_emb,
+                                                  attr_emb=attr_emb,
                                                   n_unsupervised=n_unsupervised,
-                                                  gen_params=gen_params,
-                                                  discr_params=discr_params,
-                                                  optim_params=optim_params,
-                                                  lambds=lambds)
+                                                  **params)
 
     fid = calculate_fid(val_loader, model.G, classifier)
     print(fid)

@@ -1,5 +1,6 @@
 from StarGAN.dataloader import Dataset
 from StarGAN.stargan import Generator, Discriminator
+from config import PARAMS
 # from wandb_config import API_KEY
 
 from torchvision.utils import make_grid
@@ -182,32 +183,9 @@ if __name__ == '__main__':
     n_unsupervised = 968
     n_attr = 37
 
-    gen_params = {
-        'c_dim': 37,
-        'n_res': 6
-    }
+    params = PARAMS['StarGAN']
 
-    discr_params = {
-        'img_size': 64,
-        'c_dim': 37,
-        'n_hidden': 5
-    }
-
-    optim_params = {
-        'lr': 1e-4,
-        'beta1': 0.5,
-        'beta2': 0.99,
-        'step_size': 1,
-        'gamma': 0.8
-    }
-
-    lambds = {
-        'lambda_clf': 1,
-        'lambda_gp': 10,
-        'lambda_rec': 10
-    }
-
-    model = StarGANLearner(n_attr, n_unsupervised, gen_params, discr_params, optim_params, lambds)
+    model = StarGANLearner(n_attr, n_unsupervised, **params)
 
     train_dataset = Dataset(attribute_path, image_path,  mode='train')
     train_loader = data.DataLoader(dataset=train_dataset,
@@ -248,9 +226,7 @@ if __name__ == '__main__':
     model = StarGANLearner.load_from_checkpoint(ckpt_path,
                                                 n_attr=n_attr,
                                                 n_unsupervised=n_unsupervised,
-                                                discr_params=discr_params,
-                                                optim_params=optim_params,
-                                                lambds=lambds)
+                                                **params)
 
     fid = calculate_fid(val_loader, model, classifier)
     print(fid)

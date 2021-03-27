@@ -1,6 +1,6 @@
 from Attr2Font.train import Attr2FontLearner
 from StarGAN.train import StarGANLearner
-import numpy as np
+from config import PARAMS
 import torch
 from torchvision.utils import make_grid
 
@@ -9,44 +9,20 @@ import ipywidgets as widgets
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-gen_params = {
-    'in_channels': 3,
-    'style_out': 256,
-    'out_channels': 3,
-    'n_attr': 37,
-    'attention': True
-}
-
-discr_params = {
-    'in_channels': 3,
-    'attr_channels': 37,
-    'return_attr': True
-}
-
-optim_params = {
-    'lr': 2e-4,
-    'beta1': 0.5,
-    'beta2': 0.99
-}
-
-lambds = {
-    'lambd_adv': 5,
-    'lambd_pixel': 50,
-    'lambd_char': 3,
-    'lamdb_cx': 6,
-    'lamdb_attr': 20
-}
-
-
-
 def load_model(weights, model='Attr2Font'):
+    assert model in ['Attr2Font', 'StarGAN'], 'Unknown model'
     if model == 'Attr2Font':
+        params = PARAMS[model]
         model = Attr2FontLearner.load_from_checkpoint(weights,
                                                       attr_emb=64,
-                                                      n_unsupervised=968, gen_params=gen_params,
-                                                      discr_params=discr_params, optim_params=optim_params,
-                                                      lambds=lambds).to(device)
+                                                      n_unsupervised=968,
+                                                      **params).to(device)
+    else:
+        params = PARAMS[model]
+        model = StarGANLearner.load_from_checkpoint(weights,
+                                                    37,
+                                                    968,
+                                                    **params)
     return model
 
 
@@ -80,10 +56,11 @@ def generate(target, model, dataloader, idx=-1):
 
 
 
-def get_widgets(attribute_path='data/attributes.txt', values=0):
+def get_widgets(values=0):
     """
     values - if values = 0 all values in widget 0, else - random
     """
+    attribute_path = 'data/attributes.txt'
     with open(attribute_path, 'r') as file:
         names = file.readline().split()[1:]
 
