@@ -57,8 +57,7 @@ def generate(target, model, dataloader, idx=-1, model_name='Attr2Font'):
             gen = make_grid(gen).permute(1, 2, 0)
         else:
             target = target.repeat(52, 1)
-            print(source['src_image'].shape, target.shape)
-            gen = model.G(source['src_image'].to(device), target)
+            gen = model(source['src_image'].to(device), target)
             gen = make_grid(gen).permute(1, 2, 0)
 
         return make_grid(source['src_image']).permute(1, 2, 0), gen.cpu()
@@ -108,4 +107,23 @@ def show(image):
         axes[1].set_title('Fake', fontsize=30)
         plt.show()
 
+
+def get_attribute(model, dataloader, idx=-1):
+    attribute_path = 'data/attributes.txt'
+    with open(attribute_path, 'r') as file:
+        names = file.readline().split()[1:]
+
+    with torch.no_grad():
+        if idx == -1:
+            idx = torch.randint(len(dataloader), (1, 1))
+        for i, batch in enumerate(dataloader):
+            if i == idx:
+                source = batch
+                break
+
+
+    embed_id = batch['src_embed'][0]
+    attribute = torch.sigmoid(3 * model.font_emb(torch.tensor(embed_id).to(device))) * 100
+    result = {name: attr for name, attr in zip(names, attribute)}
+    return result
 
