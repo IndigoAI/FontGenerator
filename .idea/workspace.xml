@@ -3,8 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="a411b523-15ff-4be1-9c89-448548d8036a" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Attr2Font/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/Attr2Font/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/StarGAN/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/StarGAN/train.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/display_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/display_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -35,7 +33,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
-  <component name="RunManager" selected="Python.train (1)">
+  <component name="RunManager" selected="Python.display_utils">
     <configuration name="config" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="FontGenerator" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -50,6 +48,28 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/config.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="display_utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FontGenerator" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/display_utils.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -104,6 +124,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.display_utils" />
         <item itemvalue="Python.train (1)" />
         <item itemvalue="Python.train" />
         <item itemvalue="Python.config" />
@@ -122,7 +143,7 @@
       <updated>1616804934070</updated>
       <workItem from="1616804943041" duration="1409000" />
       <workItem from="1616806842119" duration="230000" />
-      <workItem from="1616807108308" duration="2844000" />
+      <workItem from="1616807108308" duration="5339000" />
     </task>
     <servers />
   </component>
@@ -130,22 +151,22 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
-    <state width="1238" height="212" key="GridCell.Tab.0.bottom" timestamp="1616810457417">
+    <state width="1238" height="212" key="GridCell.Tab.0.bottom" timestamp="1616812971629">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
-    <state width="1238" height="212" key="GridCell.Tab.0.bottom/0.0.1280.800@0.0.1280.800" timestamp="1616810457417" />
-    <state width="1238" height="212" key="GridCell.Tab.0.center" timestamp="1616810457416">
+    <state width="1238" height="212" key="GridCell.Tab.0.bottom/0.0.1280.800@0.0.1280.800" timestamp="1616812971629" />
+    <state width="1238" height="212" key="GridCell.Tab.0.center" timestamp="1616812971627">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
-    <state width="1238" height="212" key="GridCell.Tab.0.center/0.0.1280.800@0.0.1280.800" timestamp="1616810457416" />
-    <state width="1238" height="212" key="GridCell.Tab.0.left" timestamp="1616810457415">
+    <state width="1238" height="212" key="GridCell.Tab.0.center/0.0.1280.800@0.0.1280.800" timestamp="1616812971627" />
+    <state width="1238" height="212" key="GridCell.Tab.0.left" timestamp="1616812971626">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
-    <state width="1238" height="212" key="GridCell.Tab.0.left/0.0.1280.800@0.0.1280.800" timestamp="1616810457415" />
-    <state width="1238" height="212" key="GridCell.Tab.0.right" timestamp="1616810457417">
+    <state width="1238" height="212" key="GridCell.Tab.0.left/0.0.1280.800@0.0.1280.800" timestamp="1616812971626" />
+    <state width="1238" height="212" key="GridCell.Tab.0.right" timestamp="1616812971628">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
-    <state width="1238" height="212" key="GridCell.Tab.0.right/0.0.1280.800@0.0.1280.800" timestamp="1616810457417" />
+    <state width="1238" height="212" key="GridCell.Tab.0.right/0.0.1280.800@0.0.1280.800" timestamp="1616812971628" />
     <state x="141" y="39" key="SettingsEditor" timestamp="1616806863364">
       <screen x="0" y="0" width="1280" height="800" />
     </state>
@@ -155,5 +176,6 @@
     <SUITE FILE_PATH="coverage/FontGenerator$config.coverage" NAME="config Coverage Results" MODIFIED="1616809905749" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/FontGenerator$train.coverage" NAME="train Coverage Results" MODIFIED="1616810303598" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Attr2Font" />
     <SUITE FILE_PATH="coverage/FontGenerator$train__1_.coverage" NAME="train (1) Coverage Results" MODIFIED="1616810402267" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/StarGAN" />
+    <SUITE FILE_PATH="coverage/FontGenerator$display_utils.coverage" NAME="display_utils Coverage Results" MODIFIED="1616812971613" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

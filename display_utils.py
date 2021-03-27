@@ -20,17 +20,20 @@ def load_model(weights, model='Attr2Font'):
     else:
         params = PARAMS[model]
         model = StarGANLearner.load_from_checkpoint(weights,
-                                                    37,
-                                                    968,
+                                                    n_attr=37,
+                                                    n_unsupervised=968,
                                                     **params)
     return model
 
 
-def generate(target, model, dataloader, idx=-1):
+def generate(target, model, dataloader, idx=-1, model_name='Attr2Font'):
     """
     idx - index of batch in dataloader, if idx = -1 - random
     """
+    assert model_name in ['Attr2Font', 'StarGAN'], 'Unknown model'
+
     target = torch.tensor(target).to(device) / 100
+
 
     with torch.no_grad():
         if idx == -1:
@@ -40,20 +43,25 @@ def generate(target, model, dataloader, idx=-1):
                 source = batch
                 break
 
-        attr_ids = torch.tensor([i for i in range(37)]).to(device)
-        attr_ids = attr_ids.repeat(52, 1)
-        embedding = model.attr_emb(attr_ids)
+        if model_name == 'Attr2Font':
+            attr_ids = torch.tensor([i for i in range(37)]).to(device)
+            attr_ids = attr_ids.repeat(52, 1)
+            embedding = model.attr_emb(attr_ids)
 
-        src_attr_embd = source['src_attribute'].unsqueeze(-1).to(device) * embedding
-        trg_attr_embd = target.unsqueeze(-1) * embedding
+            src_attr_embd = source['src_attribute'].unsqueeze(-1).to(device) * embedding
+            trg_attr_embd = target.unsqueeze(-1) * embedding
 
-        delta_attr_emb = trg_attr_embd - src_attr_embd
-        delta_emb = target - source['src_attribute'].to(device)
-        gen, _ = model(source['src_image'].to(device), source['src_style'].to(device), delta_emb, delta_attr_emb)
-        gen = make_grid(gen).permute(1, 2, 0)
+            delta_attr_emb = trg_attr_embd - src_attr_embd
+            delta_emb = target - source['src_attribute'].to(device)
+            gen, _ = model(source['src_image'].to(device), source['src_style'].to(device), delta_emb, delta_attr_emb)
+            gen = make_grid(gen).permute(1, 2, 0)
+        else:
+            target = target.repeat(52, 1)
+            print(source['src_image'].shape, target.shape)
+            gen = model.G(source['src_image'].to(device), target)
+            gen = make_grid(gen).permute(1, 2, 0)
 
         return make_grid(source['src_image']).permute(1, 2, 0), gen.cpu()
-
 
 
 def get_widgets(values=0):
@@ -99,4 +107,5 @@ def show(image):
         axes[1].imshow(image[1])
         axes[1].set_title('Fake', fontsize=30)
         plt.show()
+
 
