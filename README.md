@@ -3,6 +3,8 @@ Paper: https://arxiv.org/abs/2005.07865
 
 Demostration: https://colab.research.google.com/drive/1_3_HXNhasK5qZR3nvziMixiOvfPJKd4Z#scrollTo=oNg99iWJuAOP
 
+Logs in Wandb: https://wandb.ai/onopkosonja/Attr2Font
+
 ![photo_2021-03-27_22-38-42](https://user-images.githubusercontent.com/26070139/112732855-8ca7e800-8f4d-11eb-9cb0-bf7d072bd8c5.jpg)
 
 ## Results: 
