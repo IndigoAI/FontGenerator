@@ -48,7 +48,7 @@ class Attr2FontLearner(pl.LightningModule):
         self.attr_loss_fn = nn.MSELoss()
 
         self.vgg19 = VGG19_CX().to(device)
-        self.vgg19.load_model('vgg19-dcbb9e9d.pth')
+        # self.vgg19.load_model('vgg19-dcbb9e9d.pth')   uncomment for train
         self.vgg19.eval()
         self.vgg_layers = ['conv3_3', 'conv4_2']
 
