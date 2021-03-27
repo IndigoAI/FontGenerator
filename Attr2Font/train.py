@@ -1,7 +1,7 @@
-from dataloader import Dataset
-from model import Generator, Discriminator, CXLoss
-from vgg_cx import VGG19_CX
-from wandb_config import API_KEY
+from Attr2Font.dataloader import Dataset
+from Attr2Font.attr2font import Generator, Discriminator, CXLoss
+from Attr2Font.vgg_cx import VGG19_CX
+# from wandb_config import API_KEY
 
 from calculate_fid import calculate_fid
 from inception import fid_inception_v3
@@ -268,7 +268,7 @@ if __name__ == '__main__':
                                  drop_last=True,
                                  batch_size=batch_size)
 
-    os.environ["WANDB_API_KEY"] = API_KEY
+    # os.environ["WANDB_API_KEY"] = API_KEY
     os.environ['WANDB_MODE'] = 'dryrun'
     wandb_logger = WandbLogger(project='Attr2Font')
 
